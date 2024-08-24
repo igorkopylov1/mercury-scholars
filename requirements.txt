@@ -1,0 +1,8 @@
+uvicorn
+telebot
+openai
+fastapi
+python-telegram-bot
+# aioboto3
+# boto3
+# pip install -r requirements.txt

@@ -1,0 +1,14 @@
+# Игнорировать все файлы с расширением .log
+*.log
+
+# Игнорировать папку temp
+temp/
+
+# Игнорировать конкретный файл
+.env
+Makefile
+test_logging.py
+test.py
+usefulcomands.txt
+venv/
+__pycache__/
