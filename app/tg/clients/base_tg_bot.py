@@ -4,13 +4,14 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, fil
 from ...config import Config
 
 
-class BaseTgClient:
+class BaseTgClient:  # TODO: Use aiogram
 
     def __init__(self):
         self.application = ApplicationBuilder().token(Config.TG_BOT_TOKEN).build()
         # TODO: refactoring
         self.application.add_handler(CommandHandler("start", self.start))
         self.application.add_handler(CommandHandler("new", self.clear_history_for_chat))
+        self.application.initialize()
 
 
     async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):

@@ -7,7 +7,7 @@ from fastapi.routing import APIRouter
 
 logger = logging.getLogger(__name__)
 
-# base class for Application integrate with different clients such as: history client, math ...(dao)
+
 class BaseApplication:
     SSL_CERTFILE = "/etc/letsencrypt/live/mercury-scholars.ru/fullchain.pem"
     SSL_KEYFILE = "/etc/letsencrypt/live/mercury-scholars.ru/privkey.pem"
@@ -20,7 +20,6 @@ class BaseApplication:
     # Добавление маршрута из переданного роутера
         for route in router.routes:
             print(f"server api path: {prefix}{route.path}")
-            # Копируем каждый маршрут и добавляем его в текущий роутер с новым префиксом
             self.api_router.add_api_route(
                 path=f"{prefix}{route.path}",
                 endpoint=route.endpoint,
@@ -36,5 +35,6 @@ class BaseApplication:
 
 
     def run(self, host: str = "194.87.248.10", port: int = 8443):
+        self.app.state.application = self
         self.app.include_router(self.api_router)
         uvicorn.run(self.app, host=host, port=port, ssl_keyfile=self.SSL_KEYFILE, ssl_certfile=self.SSL_CERTFILE)
