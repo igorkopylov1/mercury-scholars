@@ -3,6 +3,7 @@ telebot
 openai
 fastapi
 python-telegram-bot
+aiogram
 # aioboto3
 # boto3
 # pip install -r requirements.txt

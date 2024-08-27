@@ -2,6 +2,9 @@
 Makefile
 test_logging.py
 test.py
+test_client.py
 usefulcomands.txt
 venv/
 __pycache__/
+keyboard.py
+s3client.py

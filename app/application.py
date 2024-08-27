@@ -18,7 +18,8 @@ class Application(BaseApplication):
         tg_base_client: tp.Optional[BaseTgClient] = None,
     ) -> None:
         super().__init__()
-        tg_client = tg_base_client or BaseTgClient()
+        tg_client = tg_base_client or BaseTgClient(tg_bot_token=Config.TG_BOT_TOKEN,
+            proxi_api_key=Config.PROXY_API_KEY,
+        )
         self.operation_controller = OperationsController(tg_base_client=tg_client)
-        self.app.state.application = self
         # self._pg_client = clients.PGClient(pg_url or Config.ASYNC_PG_URL)  # TODO: Add client

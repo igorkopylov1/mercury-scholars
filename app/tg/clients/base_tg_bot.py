@@ -1,29 +1,24 @@
 import typing as tp
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
+from aiogram import Bot
+import asyncio
+from .base_ai_client import OpenAiClient
+
 from ...config import Config
 
 
-class BaseTgClient:  # TODO: Use aiogram
-
-    def __init__(self):
-        self.application = ApplicationBuilder().token(Config.TG_BOT_TOKEN).build()
-        # TODO: refactoring
-        self.application.add_handler(CommandHandler("start", self.start))
-        self.application.add_handler(CommandHandler("new", self.clear_history_for_chat))
-        self.application.initialize()
-
-
-    async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Привет! . Спроси меня что-нибудь!")
-
-
-    async def new(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        raise NotImplementedError("Implemented in the nearest future")
-        # TODO: очистить контент чата
+class BaseTgClient:
+    def __init__(self, tg_bot_token: str, proxi_api_key: str,):
+        self.bot = Bot(token=tg_bot_token)
+        self.ai_client = OpenAiClient(proxi_api_key)
     
-    async def clear_history_for_chat(chat_id):  #TODO: add functionality when add Redis storage
-        raise NotImplementedError("Implemented in the nearest future")
+    async def send_chat_action(self, chat_id: int, action: str='typing')->None: # TODO: add enum
+        await self.bot.send_chat_action(chat_id=chat_id, action=action)
+
+
+    async def process_comand(self, chat_id: int, text: str) -> str:
+        # TODO: ADD comands
+        ai_response = await self.ai_client.process_text_message(text=text)
+        await self.bot.send_message(chat_id, ai_response)
 
 
 
@@ -80,24 +75,3 @@ class BaseTgClient:  # TODO: Use aiogram
 #         pass
 
 #     return ai_response
-
-
-    # def process_text_message(text, chat_id) -> str:
-    #     model = "gpt-3.5-turbo"
-
-    #     # Чтение текущей истории чата
-    #     history = []
-
-
-    #     history.append({"role": "user", "content": text})
-
-    #     try:
-    #         chat_completion = client.chat.completions.create(
-    #             model=model, messages=history
-    #         )
-    #     except Exception as e:
-    #         raise e
-
-    #     ai_response = chat_completion.choices[0].message.content
-
-    #     return ai_response

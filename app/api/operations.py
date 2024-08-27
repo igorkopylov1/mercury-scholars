@@ -18,13 +18,11 @@ router = APIRouter(prefix="/operations", tags=["Operations"])
 
 
 @router.post("/query")
-async def clone_model(
+async def query(
     request: Request,
-    data: schema.operations.TestRequest = Body(),
+    data: schema.operations.BaseRequest = Body(),
 ) -> JSONResponse:
-    print(data.user_id)
-    app: Application = request.app.state.application 
-    app.operation_controller.first_try() # Test func
-    return JSONResponse(
-        dict(status="ok")
-    )
+    app: Application = request.app.state.application
+
+    status = await app.operation_controller.create_response(chat_id=data.message.chat.id, message_text=data.message.text)
+    return JSONResponse(content={"status": status})
