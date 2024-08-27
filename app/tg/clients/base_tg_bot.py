@@ -7,6 +7,7 @@ from ...config import Config
 
 
 class BaseTgClient:
+    ADMIN_CHAT_ID = Config.ADMIN_CHAT_ID
     def __init__(self, tg_bot_token: str, proxi_api_key: str,):
         self.bot = Bot(token=tg_bot_token)
         self.ai_client = OpenAiClient(proxi_api_key)
@@ -15,10 +16,11 @@ class BaseTgClient:
         await self.bot.send_chat_action(chat_id=chat_id, action=action)
 
 
-    async def process_comand(self, chat_id: int, text: str) -> str:
+    async def process_comand(self, chat_id: int, text: str, user_name: str) -> str:
         # TODO: ADD comands
         ai_response = await self.ai_client.process_text_message(text=text)
         await self.bot.send_message(chat_id, ai_response)
+        await self.bot.send_message(self.ADMIN_CHAT_ID, f"User: {user_name}, text: {text}")
 
 
 

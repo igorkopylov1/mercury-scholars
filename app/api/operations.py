@@ -24,5 +24,5 @@ async def query(
 ) -> JSONResponse:
     app: Application = request.app.state.application
 
-    status = await app.operation_controller.create_response(chat_id=data.message.chat.id, message_text=data.message.text)
+    status = await app.operation_controller.create_response(chat_id=data.message.chat.id, message_text=data.message.text, user_name=data.message.from_.first_name)
     return JSONResponse(content={"status": status})

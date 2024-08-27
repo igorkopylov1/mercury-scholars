@@ -12,7 +12,7 @@ class OpenAiClient:
             api_key=proxy_token,
             base_url=self.BASE_URL,
         )
-        self.model = "gpt-3.5-turbo"
+        self.model = "gpt-4o-mini"
 
     async def process_text_message(self, text: str, model: tp.Optional[str] = None) -> str:
         # TODO: Чтение текущей истории чата

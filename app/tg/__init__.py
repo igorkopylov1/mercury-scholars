@@ -1,1 +1,1 @@
-from .clients import BaseTgClient
+from .clients import BaseTgClient, S3Manager

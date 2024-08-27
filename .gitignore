@@ -7,4 +7,4 @@ usefulcomands.txt
 venv/
 __pycache__/
 keyboard.py
-s3client.py
+s3client_test.py
