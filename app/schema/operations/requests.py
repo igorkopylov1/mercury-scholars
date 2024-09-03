@@ -23,13 +23,21 @@ class User(pydantic.BaseModel):
     username: tp.Optional[str] = pydantic.Field(None, description="User's or bot's username.")
     language_code: tp.Optional[str] = pydantic.Field(None, description="IETF language tag of the user's language.")
 
+class Document(pydantic.BaseModel):
+    file_name: str
+    mime_type: str
+    file_id: str
+    file_unique_id: str
+    file_size: int
+
 class Message(pydantic.BaseModel):
     message_id: int = pydantic.Field(description="Message identifier")
     from_: User = pydantic.Field(..., alias='from', description="User information")  # Используем alias для поля
     chat: Chat = pydantic.Field(description="Chat information")
     date: datetime = pydantic.Field(description="Date in Unix timestamp format")
     text: str = pydantic.Field(description="Text")
+    document: tp.Optional[Document]
 
 class BaseRequest(pydantic.BaseModel):
     update_id: int = pydantic.Field(description="Update identifier")
-    message: Message
+    message: tp.Optional[Message]

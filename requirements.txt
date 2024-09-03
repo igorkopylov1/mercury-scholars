@@ -4,4 +4,8 @@ openai
 fastapi
 aiogram
 aioboto3
+aioredis
+asyncpg
+sqlalchemy
+pydantic
 # pip install -r requirements.txt

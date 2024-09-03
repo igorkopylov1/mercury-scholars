@@ -1,26 +1,60 @@
 import typing as tp
 from aiogram import Bot
-import asyncio
+from aiogram.exceptions import TelegramForbiddenError
+
+import logging
 from .base_ai_client import OpenAiClient
 
 from ...config import Config
+from ..magazine import Comands
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class BaseTgClient:
-    ADMIN_CHAT_ID = Config.ADMIN_CHAT_ID
+    ADMIN_CHAT_ID = None
     def __init__(self, tg_bot_token: str, proxi_api_key: str,):
         self.bot = Bot(token=tg_bot_token)
         self.ai_client = OpenAiClient(proxi_api_key)
+        self.ADMIN_CHAT_ID = Config.ADMIN_CHAT_ID
     
     async def send_chat_action(self, chat_id: int, action: str='typing')->None: # TODO: add enum
-        await self.bot.send_chat_action(chat_id=chat_id, action=action)
+        try:
+            await self.bot.send_chat_action(chat_id=chat_id, action=action)
+        except TelegramForbiddenError:
+            logger.error(f"blocked by user, chat id: {chat_id}")
 
 
-    async def process_comand(self, chat_id: int, text: str, user_name: str) -> str:
+    async def process_comand(self, chat_id: int, text: str, user_name: str) -> None:
         # TODO: ADD comands
         ai_response = await self.ai_client.process_text_message(text=text)
-        await self.bot.send_message(chat_id, ai_response)
+        try:
+            await self.bot.send_message(chat_id, ai_response)
+        except TelegramForbiddenError:
+            logger.error(f"blocked by @{user_name}, chat id: {chat_id}")
         await self.bot.send_message(self.ADMIN_CHAT_ID, f"User: {user_name}, text: {text}")
+
+
+    async def process_spam_user(self, chat_id: int, user_name: str) -> None:
+        try:
+            await self.bot.send_message(chat_id, f"{user_name}, {Comands.spam_message}")
+        except TelegramForbiddenError:
+            logger.error(f"blocked by @{user_name}, chat id: {chat_id}")
+        await self.bot.send_message(self.ADMIN_CHAT_ID, f"Spamer User: @{user_name}, chat_id: {chat_id}")
+
+    async def process_unauthorized_user(self, chat_id: int, user_name: str) -> None:
+        try:
+            await self.bot.send_message(chat_id, f"{user_name}, {Comands.unauthorized_message}")
+        except TelegramForbiddenError:
+            logger.error(f"blocked by @{user_name}, chat id: {chat_id}")
+        await self.bot.send_message(self.ADMIN_CHAT_ID, f"User: @{user_name}, chat_id: {chat_id}")
+    
+    async def process_bad_request(self, chat_id: int, user_name: str) -> None:
+        try:
+            await self.bot.send_message(chat_id, Comands.bad_request_message)
+        except:
+            await self.bot.send_message(self.ADMIN_CHAT_ID, f"User: @{user_name}, bad_reqest")
 
 
 

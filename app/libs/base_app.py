@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.routing import APIRouter
 
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -19,7 +20,7 @@ class BaseApplication:
     def include_router(self, router: APIRouter, prefix: str):
     # Добавление маршрута из переданного роутера
         for route in router.routes:
-            print(f"server api path: {prefix}{route.path}")
+            logger.info(f"Server api path: {prefix}{route.path}")
             self.api_router.add_api_route(
                 path=f"{prefix}{route.path}",
                 endpoint=route.endpoint,
