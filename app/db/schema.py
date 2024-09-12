@@ -28,10 +28,10 @@ class Employees(Base):  # Test db
     _eq_fields = _repr_fields
 
 
-class Users(Base):
-    __tablename__ = 'users'
+class Chat_info(Base):
+    __tablename__ = 'chat_info'
 
-    chat_id: Mapped[str] = mapped_column(sa.Integer, primary_key=True, autoincrement=True)
+    chat_id: Mapped[str] = mapped_column(sa.String(50), primary_key=True)
     first_name: Mapped[str] = mapped_column(sa.String(100))
     start_date: Mapped[sa.Date] = mapped_column(sa.Date)
     end_date: Mapped[sa.Date] = mapped_column(sa.Date)

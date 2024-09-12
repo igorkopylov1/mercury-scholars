@@ -8,4 +8,5 @@ aioredis
 asyncpg
 sqlalchemy
 pydantic
+pytz
 # pip install -r requirements.txt

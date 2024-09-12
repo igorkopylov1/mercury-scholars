@@ -1,9 +1,11 @@
 import logging
+import typing as tp
 import json
 import asyncio
 import aioboto3
 from botocore.exceptions import ClientError
 
+import os
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -20,6 +22,8 @@ class FileStatus:
 
 
 class S3Manager:
+    ENDPOINT_URL = "https://storage.yandexcloud.net"
+    MAX_CONTENT_HISTORY = 6
 
     async def _is_file_exist(self, s3client: aioboto3.Session.client, bucket_name: str, key: str) -> bool:
         try:
@@ -46,7 +50,7 @@ class S3Manager:
     async def create_bucket(self, session: aioboto3.Session, bucket_name: str) -> None:
         async with session.client(
             service_name='s3',
-            endpoint_url='https://storage.yandexcloud.net'
+            endpoint_url=self.ENDPOINT_URL
         ) as s3client:
             if not await self._is_bucket_exist(s3client, bucket_name):
                 try:
@@ -58,36 +62,52 @@ class S3Manager:
                     else:
                         logger.error(f"Unexpected error while creating bucket: {e}")
 
-    async def read_file(self, session: aioboto3.Session, bucket_name: str, key: str) -> str:
+    async def read_file(self, session: aioboto3.Session, bucket_name: str, key: str) -> tp.Optional[list[dict]]:  # TODO: json format
         async with session.client(
             service_name='s3',
-            endpoint_url='https://storage.yandexcloud.net'
+            endpoint_url=self.ENDPOINT_URL
         ) as s3client:
             if not await self._is_file_exist(s3client, bucket_name, key):
                 logger.warning(f"File '{bucket_name}' does not exist.")
-                return ""
+                return None
 
             try:
                 history_object_response = await s3client.get_object(
                     Bucket=bucket_name, Key=key
                 )
                 response_object = await history_object_response["Body"].read()
-                return response_object.decode('utf-8')
+                #return response_object.decode('utf-8')
+                return json.loads(response_object)
 
             except ClientError as e:
                 logger.error(f"Error retrieving object '{key}' from bucket '{bucket_name}': {e}")
-                return ""
+                return None
             except Exception as e:
                 logger.error(f"An unexpected error occurred: {e}")
-                return ""
+                return None
+    
+    @staticmethod
+    async def add_ai_content(content: list[dict], future: asyncio.Future) -> None:
+        ai_response = await future
+        content.append({"role": "assistant", "content": ai_response})
+    
+    @classmethod
+    def del_usless_content(cls, content: list[dict]) -> None:
+        if len(content) >= cls.MAX_CONTENT_HISTORY:
+            del content[:len(content) - cls.MAX_CONTENT_HISTORY + 1]
 
-    async def write_file(self, session: aioboto3.Session, bucket_name: str, key: str, content: bytes) -> None:
+
+    async def write_file(self, session: aioboto3.Session, bucket_name: str, key: str, content: list[dict], *, future: tp.Optional[asyncio.Future] = None) -> None:  # TODO: json format
         async with session.client(
             service_name='s3',
-            endpoint_url='https://storage.yandexcloud.net'
+            endpoint_url=self.ENDPOINT_URL
         ) as s3client:
             try:
-                await s3client.put_object(Bucket=bucket_name, Key=key, Body=content)
+                if future:
+                    await self.add_ai_content(content=content, future=future)
+                self.del_usless_content(content)
+                dump_content = json.dumps(content)
+                await s3client.put_object(Bucket=bucket_name, Key=key, Body=dump_content)
                 logger.info(f"File '{key}' successfully written to bucket '{bucket_name}'.")
             except ClientError as e:
                 logger.error(f"Failed to write file '{key}' to bucket '{bucket_name}': {e}")

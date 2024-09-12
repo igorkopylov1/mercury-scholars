@@ -1,10 +1,10 @@
 import typing as tp
+import logging
+import asyncio
 from aiogram import Bot
 from aiogram.exceptions import TelegramForbiddenError
 
-import logging
 from .base_ai_client import OpenAiClient
-
 from ...config import Config
 from ..magazine import Comands
 
@@ -14,6 +14,8 @@ logger = logging.getLogger(__name__)
 
 class BaseTgClient:
     ADMIN_CHAT_ID = None
+    MAX_MESSAGE_LENGHT = 4096
+
     def __init__(self, tg_bot_token: str, proxi_api_key: str,):
         self.bot = Bot(token=tg_bot_token)
         self.ai_client = OpenAiClient(proxi_api_key)
@@ -26,14 +28,20 @@ class BaseTgClient:
             logger.error(f"blocked by user, chat id: {chat_id}")
 
 
-    async def process_comand(self, chat_id: int, text: str, user_name: str) -> None:
-        # TODO: ADD comands
-        ai_response = await self.ai_client.process_text_message(text=text)
+    async def process_comand(self, chat_id: int, context: list[dict], user_name: str, *, future: tp.Optional[asyncio.Future] = None) -> None:
+        ai_response = await self.ai_client.process_text_message(history=context)
+        if future:
+            future.set_result(ai_response)
         try:
+            # if len(ai_response) > self.MAX_MESSAGE_LENGHT:
+            #     left_bound = 0
+            #     right_bound = self.MAX_MESSAGE_LENGHT - 100
+            #     while True:
+                    
             await self.bot.send_message(chat_id, ai_response)
         except TelegramForbiddenError:
             logger.error(f"blocked by @{user_name}, chat id: {chat_id}")
-        await self.bot.send_message(self.ADMIN_CHAT_ID, f"User: {user_name}, text: {text}")
+        await self.bot.send_message(self.ADMIN_CHAT_ID, f"User: {user_name}, context: {context}")
 
 
     async def process_spam_user(self, chat_id: int, user_name: str) -> None:

@@ -3,7 +3,7 @@ import typing as tp
 
 from .config import Config
 from . import api  # noqa
-from .controllers import OperationsController
+from .controllers import OperationsController, DBController
 from .libs import BaseApplication
 from .tg import BaseTgClient, S3Manager, SessionRedisClient, AuthorizeRedisClient
 from .db import PGClient
@@ -20,8 +20,10 @@ class Application(BaseApplication):
         session_redis_client: tp.Optional[SessionRedisClient] = None,
         authorize_redis_client: tp.Optional[AuthorizeRedisClient] = None,
         pg_url: tp.Optional[str] = None,
+        ssl_certfile: tp.Optional[str] = None,
+        ssl_keyfile: tp.Optional[str] = None
     ) -> None:
-        super().__init__()
+        super().__init__(ssl_certfile, ssl_keyfile)
         self.tg_client = tg_client or BaseTgClient(tg_bot_token=Config.TG_BOT_TOKEN,
             proxi_api_key=Config.PROXY_API_KEY,
         )
@@ -36,3 +38,4 @@ class Application(BaseApplication):
             authorize_redis_client=self.authorize_redis_client,
             pg_client=self.pg_client,
         )
+        self.db_controller = DBController(pg_client=self.pg_client)

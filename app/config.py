@@ -10,6 +10,7 @@ class Config(BaseRestConfig):
 
     @classmethod
     def initialize(cls):
+        # TG settings
         cls.TG_BOT_TOKEN = cls.get("TG_BOT_TOKEN", "tg_token")
         cls.TG_BOT_CHATS = cls.get("TG_BOT_CHATS", "chats").lower().split(",")  # TODO: delete option, integrate with redis, orm
 
@@ -29,9 +30,13 @@ class Config(BaseRestConfig):
         cls.TIMEZONE = "Europe/Moscow"
 
         # PG settings
-        DB_USERNAME=cls.get("DB_USERNAME", "Gosha Kucenko")
-        DB_PASSWORD=cls.get("DB_PASSWORD", "huckme")
-        DB_HOSTNAME=cls.get("DB_HOSTNAME", "localhost")
-        DB_PORT=cls.get("DB_PORT", "port")
-        DB_DATABASE=cls.get("DB_DATABASE", "db_dev")
+        DB_USERNAME = cls.get("DB_USERNAME", "Gosha Kucenko")
+        DB_PASSWORD = cls.get("DB_PASSWORD", "huckme")
+        DB_HOSTNAME = cls.get("DB_HOSTNAME", "localhost")
+        DB_PORT = cls.get("DB_PORT", "port")
+        DB_DATABASE = cls.get("DB_DATABASE", "db_dev")
         cls.DATABASE_URL = f"postgresql+asyncpg://{DB_USERNAME}:{DB_PASSWORD}@{DB_HOSTNAME}:{DB_PORT}/{DB_DATABASE}"
+
+        # Certificates settings
+        cls.SSL_CERTFILE_PATH = cls.get("SSL_CERTFILE_PATH")
+        cls.SSL_CERTFILE_KEY = cls.get("SSL_CERTFILE_KEY")

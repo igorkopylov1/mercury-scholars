@@ -4,9 +4,10 @@ import aioboto3
 from datetime import datetime
 import pytz
 from enum import Enum
+import asyncio
 
 from ..tg import BaseTgClient, S3Manager, AuthorizeRedisClient, SessionRedisClient
-from ..db import PGClient, Users
+from ..db import PGClient, Chat_info
 from ..config import Config
 from .. import schema as schema
 
@@ -59,7 +60,7 @@ class OperationsController:
         user_info: schema.redis.RedisAuthorize = await self.authorize_redis_client.get_value(chat_id)
         logger.info(f"Parsed data from redis {user_info}")
         if user_info is None:
-            selected_rows: tp.Optional[list[Users]] = await self.pg_client.get_users(chat_id=chat_id)
+            selected_rows: tp.Optional[list[Chat_info]] = await self.pg_client.get_chat_info(chat_id=chat_id)
             logger.info(f"Parsed info from DB: {selected_rows}")
             if selected_rows:
                 selected_user_info = selected_rows[0]
@@ -101,33 +102,32 @@ class OperationsController:
         ))
         return access == schema.redis.AccessLevel.GRANTED
     
-    async def check_last_session(self, chat_id: str) -> SessionActivity:
+    async def check_last_session(self, future: asyncio.Future, chat_id: str) -> SessionActivity:
         now = int(datetime.now().timestamp())
         if not self.session_redis_client.check_connection():
             await self.session_redis_client.connect()
         user_info: schema.redis.RedisSession = await self.session_redis_client.get_value(chat_id)
         if not user_info:
-            return SessionActivity.CHECK_ACCESS
+            future.set_result(SessionActivity.CHECK_ACCESS)
         elif user_info.access != schema.redis.AccessLevel.GRANTED:
-            return SessionActivity.DENIED
+            future.set_result(SessionActivity.DENIED)
         elif abs(now - user_info.last_session) <= 5:
-            return SessionActivity.SPAM
+            future.set_result(SessionActivity.SPAM)
         elif 5 <= abs(now - user_info.last_session) <= 60 * 2:
-            return SessionActivity.WITH_HISTORY
+            future.set_result(SessionActivity.WITH_HISTORY)
         else:
-            return SessionActivity.ORDINARY
-    
-    @staticmethod
-    def is_history_nessary(message1: str, message2: str):
-        words1 = set(message1.lower().split())
-        words2 = set(message2.lower().split())
+            future.set_result(SessionActivity.ORDINARY)
 
-        common_words = words1.intersection(words2)
-        return len(common_words) * 2 / (len(words1) + len(words2))
+    async def _gather(*args):
+        return await asyncio.gather(*args, return_exceptions=False)
 
     async def create_response(self, chat_id: int, message_text: str, user_name: str) -> int:
-        session_condition = await self.check_last_session(chat_id=str(chat_id))
-        logger.info(session_condition)
+        loop = asyncio.get_running_loop()
+        session_condition_future: asyncio.Future = loop.create_future()
+        asyncio.create_task(self.check_last_session(future=session_condition_future, chat_id=str(chat_id)))
+        await self.tg_base_client.send_chat_action(chat_id=str(chat_id), action='typing')
+        session_condition = await session_condition_future
+        logger.info(f"{session_condition_future}, {session_condition}")
         match session_condition:  # TODO: simplify
             case SessionActivity.SPAM:
                 logger.info(f"Spamer user: {user_name}, {chat_id}")
@@ -150,24 +150,35 @@ class OperationsController:
                     session_condition = SessionActivity.ORDINARY
         if session_condition not in [SessionActivity.WITH_HISTORY, SessionActivity.ORDINARY]:
             return "ok"
-        await self.session_redis_client.set_value(schema.redis.RedisSession(
-            chat_id=str(chat_id),
-            first_name=user_name,
-            access=schema.redis.AccessLevel.GRANTED,
-            last_session=int(datetime.now().timestamp())
-        ))
-
-        await self.tg_base_client.send_chat_action(chat_id=str(chat_id), action='typing')
+        asyncio.create_task(self.session_redis_client.set_value(schema.redis.RedisSession(
+                chat_id=str(chat_id),
+                first_name=user_name,
+                access=schema.redis.AccessLevel.GRANTED,
+                last_session=int(datetime.now().timestamp())
+            ))
+        )
+        history = []
         if session_condition == SessionActivity.WITH_HISTORY:  # TODO: add prompt text
             history_content = await self.s3client.read_file(session=self.session, bucket_name=self.BUCKET_NAME, key=str(chat_id))
-            if self.is_history_nessary(history_content, message_text):
-                message_text = f"{history_content}\n {message_text}"
-        
+            if history_content is not None:
+                history.extend(history_content)
+        history.append({"role": "user", "content": message_text})
         try:
-            await self.tg_base_client.process_comand(chat_id, message_text, user_name)
+            ai_answer_future: asyncio.Future = loop.create_future()
+            await asyncio.gather(
+                self.tg_base_client.process_comand(
+                    chat_id,
+                    history,
+                    user_name,
+                    future=ai_answer_future
+                    ),
+                self.s3client.write_file(
+                    session=self.session,
+                    bucket_name=self.BUCKET_NAME,
+                    key=str(chat_id),
+                    content=history,
+                    future=ai_answer_future)
+            )
         except Exception as e:
             raise e  # TODO: processing except
-        
-        await self.s3client.write_file(session=self.session, bucket_name=self.BUCKET_NAME, key=str(chat_id), content=message_text)
-
         return "ok"

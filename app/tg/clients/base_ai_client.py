@@ -13,19 +13,17 @@ class OpenAiClient:
             base_url=self.BASE_URL,
         )
         self.model = "gpt-4o-mini"
+        self.max_tokens = 400
 
-    async def process_text_message(self, text: str, model: tp.Optional[str] = None) -> str:
-        # TODO: Чтение текущей истории чата
-        history = []
-        history.append({"role": "user", "content": text})  # TODO: add roles
-        
+    async def process_text_message(self, history: list[dict], model: tp.Optional[str] = None) -> str:        
         try:
             if not model:
                 model = self.model
             chat_completion = await asyncio.to_thread(
                 self.client.chat.completions.create,
                 model=model,
-                messages=history
+                messages=history,
+                max_tokens=self.max_tokens
             )
 
         except Exception as e:

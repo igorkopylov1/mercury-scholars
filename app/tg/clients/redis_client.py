@@ -4,6 +4,7 @@ import typing as tp
 
 import asyncio
 from datetime import datetime
+import aioredis
 
 from ...libs import BaseRedisClient
 from ... import schema as schema

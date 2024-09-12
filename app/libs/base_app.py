@@ -13,7 +13,11 @@ class BaseApplication:
     SSL_CERTFILE = "/etc/letsencrypt/live/mercury-scholars.ru/fullchain.pem"
     SSL_KEYFILE = "/etc/letsencrypt/live/mercury-scholars.ru/privkey.pem"
 
-    def __init__(self):
+    def __init__(self, ssl_certfile: tp.Optional[str] = None, ssl_keyfile: tp.Optional[str] = None):
+        if ssl_certfile:
+            self.SSL_CERTFILE = ssl_certfile
+        if ssl_keyfile:
+            self.SSL_KEYFILE = ssl_keyfile
         self.app = FastAPI()
         self.api_router = APIRouter()
 
@@ -35,7 +39,7 @@ class BaseApplication:
             )
 
 
-    def run(self, host: str = "194.87.248.10", port: int = 8443):
+    def run(self, host: str = "0.0.0.0", port: int = 8443):
         self.app.state.application = self
         self.app.include_router(self.api_router)
         uvicorn.run(self.app, host=host, port=port, ssl_keyfile=self.SSL_KEYFILE, ssl_certfile=self.SSL_CERTFILE)

@@ -1,12 +1,10 @@
 import logging
 import typing as tp
 
-from fastapi import Depends, Request, Body
+from fastapi import Request
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRouter
-from fastapi.exceptions import RequestValidationError
 
-from telegram import Update
 
 from .. import schema as schema
 
@@ -44,3 +42,34 @@ async def query(
 
     status = await app.operation_controller.create_response(chat_id=data["message"]["chat"]["id"], message_text=data["message"]["text"], user_name=data["message"]["from"]["first_name"])
     return JSONResponse(content={"status": status})
+
+
+@router.post("/db_update")
+async def db_query(
+    request: Request,
+    # data: schema.db_operation.InsertRequest = Depends()
+) -> JSONResponse:
+    app: Application = request.app.state.application
+    data = await request.json()
+    error = None
+    try:
+        status = await app.db_controller.insert_chat_info(
+            chat_id=data.body.chat_id,
+            first_name=data.body.first_name,
+            start_date=data.body.start_date,
+            end_date=data.body.end_date,
+            pay=data.body.pay,
+        )
+    except Exception as e:
+        error = e
+    return JSONResponse(dict(status=status, error=error))
+
+
+@router.post("/test")
+async def db_query(
+    request: Request,
+    # data: schema.db_operation.InsertRequest = Depends()
+) -> JSONResponse:
+    data = await request.json()
+    logger.info(data)
+    return JSONResponse(dict(status="ok"))

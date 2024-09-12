@@ -10,3 +10,5 @@ keyboard.py
 s3client_test.py
 redis_test.py
 postgre_client.py
+certificates/
+dump.rdb

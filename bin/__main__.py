@@ -10,7 +10,7 @@ def main() -> None:
     Config.validate()
     Config.initialize()
 
-    app = Application()
+    app = Application(ssl_certfile=Config.SSL_CERTFILE_PATH, ssl_keyfile=Config.SSL_CERTFILE_KEY)
     app.include_router(router=api.router, prefix="/api")
 
     app.run(Config.HOST, Config.PORT)
